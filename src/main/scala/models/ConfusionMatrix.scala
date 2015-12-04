@@ -2,10 +2,6 @@ package models
 
 import breeze.linalg._
 import breeze.stats.distributions.Multinomial
-import breeze.numerics.round
-import scala.util.Random
-import scala.math.floor
-import scala.collection.mutable
 
 object ConfusionMatrix {
   def apply(confusionMatrix: DenseMatrix[Double]): ConfusionMatrix = new ConfusionMatrix(confusionMatrix)
@@ -20,11 +16,11 @@ object ConfusionMatrix {
   }
   */
   def update(old: ConfusionMatrix, newConfMat: DenseMatrix[Double]): ConfusionMatrix = {
-    new ConfusionMatrix( old.getConfusionMatrix + newConfMat)
+    new ConfusionMatrix( old.confusionMatrix + newConfMat)
   }
   def update(old: ConfusionMatrix, scoreAndLabels: Seq[(Double,Double)]): ConfusionMatrix = {
     val newConfusionMatrix: DenseMatrix[Double] = scoreAndLabels.map(mapperPredictionPairsToMatrix).reduce(reduceCMLists)
-    new ConfusionMatrix( old.getConfusionMatrix + newConfusionMatrix)
+    new ConfusionMatrix( old.confusionMatrix + newConfusionMatrix)
   }
   def mapperPredictionPairsToMatrix(t: (Double,Double)): DenseMatrix[Double] = {
     (Math.round(t._1), Math.round(t._2)) match {
@@ -55,21 +51,25 @@ object ConfusionMatrix {
 
 
 
-class ConfusionMatrix(private var confusionMatrix: DenseMatrix[Double]) {
+class ConfusionMatrix(val confusionMatrix: DenseMatrix[Double]) {
   require(sum(confusionMatrix) > 0.0, "Confusion matrix must not be empty")
 
-  def getConfusionMatrix: DenseMatrix[Double] = this.confusionMatrix
-  def n: Double = sum(confusionMatrix)
-  def tn: Double = confusionMatrix(0,0)
-  def fn: Double = confusionMatrix(0,1)
-  def fp: Double = confusionMatrix(1,0)
-  def tp: Double = confusionMatrix(1,1)
+  val n: Double = sum(this.confusionMatrix)
+  lazy val confusionMatrixNormalized: DenseMatrix[Double] = this.confusionMatrix.map{ _ / this.n }
+  lazy val tn: Double = this.confusionMatrix(0,0)
+  lazy val tnRate: Double = this.tn / this.n
+  lazy val fn: Double = this.confusionMatrix(0,1)
+  lazy val fnRate: Double = this.fn / this.n
+  lazy val fp: Double = this.confusionMatrix(1,0)
+  lazy val fpRate: Double = this.fp / this.n
+  lazy val tp: Double = this.confusionMatrix(1,1)
+  lazy val tpRate: Double = this.tp / this.n
 
-  def correct: Double = trace(confusionMatrix)
-  def incorrect: Double = trace(confusionMatrix.t)
+  lazy val correct: Double = trace(confusionMatrix)
+  lazy val incorrect: Double = trace(confusionMatrix.t)
 
   // metrics
-  def sensitivity: Double = {
+  lazy val sensitivity: Double = {
     val denom = this.tp + this.fp
     denom > 0.0 match {
       case false => 0.0
@@ -77,7 +77,7 @@ class ConfusionMatrix(private var confusionMatrix: DenseMatrix[Double]) {
     }
   }
 
-  def specificity: Double = {
+  lazy val specificity: Double = {
     val denom =  this.fp + this.tn
     denom > 0.0 match {
       case false => 0.0
@@ -85,7 +85,7 @@ class ConfusionMatrix(private var confusionMatrix: DenseMatrix[Double]) {
     }
   }
 
-  def falsePositiveRate: Double = {
+  lazy val falsePositiveRate: Double = {
     val denom =  this.fp + this.tn
     denom > 0.0 match {
       case false => 0.0
@@ -93,7 +93,7 @@ class ConfusionMatrix(private var confusionMatrix: DenseMatrix[Double]) {
     }
   }
 
-  def falseNegativeRate: Double = {
+  lazy val falseNegativeRate: Double = {
     val denom =  this.fn + this.tp
     denom > 0.0 match {
       case false => 0.0
@@ -101,7 +101,7 @@ class ConfusionMatrix(private var confusionMatrix: DenseMatrix[Double]) {
     }
   }
 
-  def precision: Double = {
+  lazy val precision: Double = {
     val denom = this.tp + this.fp
     denom > 0.0 match {
       case false => 0.0
@@ -109,7 +109,7 @@ class ConfusionMatrix(private var confusionMatrix: DenseMatrix[Double]) {
     }
   }
 
-  def recall: Double = {
+  lazy val recall: Double = {
     val denom = this.tp + this.fn
     denom > 0.0 match {
       case false => 0.0
@@ -117,10 +117,10 @@ class ConfusionMatrix(private var confusionMatrix: DenseMatrix[Double]) {
     }
   }
 
-  def accuracy: Double = trace(confusionMatrix) / sum(confusionMatrix)
-  def error: Double = 1.0 - this.accuracy
+  lazy val accuracy: Double = trace(confusionMatrix) / sum(confusionMatrix)
+  lazy val error: Double = 1.0 - this.accuracy
 
-  def f1Coefficient: Double = {
+  lazy val f1Coefficient: Double = {
     val denom = this.precision + this.recall
     denom > 0.0 match {
       case false => 0.0
@@ -128,7 +128,7 @@ class ConfusionMatrix(private var confusionMatrix: DenseMatrix[Double]) {
     }
   }
 
-  def matthewsCorrelationCoefficient: Double = {
+  lazy val matthewsCorrelationCoefficient: Double = {
     val num   = (tp * tn) - (fp * fn)
     val denom = Math.sqrt(  (tp + fp) * (tp + fn) * (tn + fp) * (tn + fn)  )
     denom > 0.0 match {
@@ -138,8 +138,8 @@ class ConfusionMatrix(private var confusionMatrix: DenseMatrix[Double]) {
   }
 
 
-  def +(other: ConfusionMatrix): ConfusionMatrix = ConfusionMatrix( this.getConfusionMatrix + other.getConfusionMatrix )
-  def -(other: ConfusionMatrix): ConfusionMatrix = ConfusionMatrix( this.getConfusionMatrix - other.getConfusionMatrix )
+  def +(other: ConfusionMatrix): ConfusionMatrix = ConfusionMatrix( this.confusionMatrix + other.confusionMatrix )
+  def -(other: ConfusionMatrix): ConfusionMatrix = ConfusionMatrix( this.confusionMatrix - other.confusionMatrix )
   def update(scoreAndLabels: Seq[(Double,Double)]): ConfusionMatrix = ConfusionMatrix.update(this, scoreAndLabels)
   def update(confMat: DenseMatrix[Double]): ConfusionMatrix = ConfusionMatrix.update(this, confMat)
 

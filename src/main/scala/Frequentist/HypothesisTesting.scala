@@ -86,13 +86,6 @@ object HypothesisTesting {
   }
 
   // precision and recall
-  private def recallCDF(confMatNull: ConfusionMatrix, confMatAlt: ConfusionMatrix): Double = {
-    val pNull = confMatNull.recall
-    val nAlt = (confMatAlt.tp + confMatAlt.fn).toInt
-    val xAlt = confMatAlt.tp.toInt
-    this.binomialCDF(xAlt, nAlt, pNull)
-  }
-
   def recall(confMatNull: ConfusionMatrix, confMatAlt: ConfusionMatrix, threshold: Double = 0.05): HypothesisTestResult = {
     val F = this.recallCDF(confMatNull, confMatAlt)
     val pValue = 1 - F
@@ -100,7 +93,7 @@ object HypothesisTesting {
 
     HypothesisTestResult(
       statistic = "recall",
-      statisticDelta = confMatAlt.error - confMatNull.error,
+      statisticDelta = confMatAlt.recall - confMatNull.recall,
       cdfX = F,
       pValue = pValue,
       rejectNull = passed,
@@ -115,7 +108,45 @@ object HypothesisTesting {
 
     HypothesisTestResult(
       statistic = "recall",
-      statisticDelta = confMatAlt.error - confMatNull.error,
+      statisticDelta = confMatAlt.recall - confMatNull.recall,
+      cdfX = F,
+      pValue = pValue,
+      rejectNull = passed,
+      threshold = threshold
+    )
+  }
+
+  private def recallCDF(confMatNull: ConfusionMatrix, confMatAlt: ConfusionMatrix): Double = {
+    val pNull = confMatNull.recall
+    val nAlt = (confMatAlt.tp + confMatAlt.fn).toInt
+    val xAlt = confMatAlt.tp.toInt
+    this.binomialCDF(xAlt, nAlt, pNull)
+  }
+
+
+  def precision(confMatNull: ConfusionMatrix, confMatAlt: ConfusionMatrix, threshold: Double = 0.05): HypothesisTestResult = {
+    val F = this.precisionCDF(confMatNull, confMatAlt)
+    val pValue = 1 - F
+    val passed = pValue < threshold
+
+    HypothesisTestResult(
+      statistic = "precision",
+      statisticDelta = confMatAlt.precision - confMatNull.precision,
+      cdfX = F,
+      pValue = pValue,
+      rejectNull = passed,
+      threshold = threshold
+    )
+  }
+
+  def precision2Way(confMatNull: ConfusionMatrix, confMatAlt: ConfusionMatrix, threshold: Double = 0.05): HypothesisTestResult = {
+    val F = this.precisionCDF(confMatNull, confMatAlt)
+    val pValue = Array(1-F,F).min
+    val passed = pValue < threshold
+
+    HypothesisTestResult(
+      statistic = "precision",
+      statisticDelta = confMatAlt.precision - confMatNull.precision,
       cdfX = F,
       pValue = pValue,
       rejectNull = passed,
@@ -130,18 +161,41 @@ object HypothesisTesting {
     this.binomialCDF(xAlt, nAlt, pNull)
   }
 
-  def precision(confMatNull: ConfusionMatrix, confMatAlt: ConfusionMatrix, threshold: Double = 0.05): HypothesisTestResult = {
-    1 - this.precisionCDF(confMatNull, confMatAlt)
-  }
 
-  def precision2Way(confMatNull: ConfusionMatrix, confMatAlt: ConfusionMatrix, threshold: Double = 0.05): HypothesisTestResult = {
-    val F = this.precisionCDF(confMatNull, confMatAlt)
-    Array(1-F,F).min
-  }
 
 
   // f-1 ~ Binomial
-  private def f1CDF(confMatNull: ConfusionMatrix, confMatAlt: ConfusionMatrix, threshold: Double = 0.05): HypothesisTestResult = {
+  def f1(confMatNull: ConfusionMatrix, confMatAlt: ConfusionMatrix, threshold: Double = 0.05): HypothesisTestResult = {
+    val F = this.f1CDF(confMatNull, confMatAlt)
+    val pValue = 1 - F
+    val passed = pValue < threshold
+
+    HypothesisTestResult(
+      statistic = "f1",
+      statisticDelta = confMatAlt.f1Coefficient - confMatNull.f1Coefficient,
+      cdfX = F,
+      pValue = pValue,
+      rejectNull = passed,
+      threshold = threshold
+    )
+  }
+
+  def f12Way(confMatNull: ConfusionMatrix, confMatAlt: ConfusionMatrix, threshold: Double = 0.05): HypothesisTestResult = {
+    val F = this.f1CDF(confMatNull, confMatAlt)
+    val pValue = Array(1-F,F).min
+    val passed = pValue < threshold
+
+    HypothesisTestResult(
+      statistic = "f1",
+      statisticDelta = confMatAlt.f1Coefficient - confMatNull.f1Coefficient,
+      cdfX = F,
+      pValue = pValue,
+      rejectNull = passed,
+      threshold = threshold
+    )
+  }
+
+  private def f1CDF(confMatNull: ConfusionMatrix, confMatAlt: ConfusionMatrix): Double = {
     val pNull = confMatNull.f1Coefficient
     val nAlt: Int = {
       val n = 2 * squared(confMatAlt.tp).toInt + (confMatAlt.tp * confMatAlt.fn) + (confMatAlt.tp * confMatAlt.fp) + (confMatAlt.fn * confMatAlt.fp)
@@ -151,19 +205,21 @@ object HypothesisTesting {
     this.binomialCDF(xAlt, nAlt, pNull)
   }
 
-  def f1(confMatNull: ConfusionMatrix, confMatAlt: ConfusionMatrix, threshold: Double = 0.05): HypothesisTestResult = {
-    1 - this.f1CDF(confMatNull, confMatAlt)
-  }
-
-  def f12Way(confMatNull: ConfusionMatrix, confMatAlt: ConfusionMatrix, threshold: Double = 0.05): HypothesisTestResult = {
-    val F = this.f1CDF(confMatNull, confMatAlt)
-    Array(1-F,F).min
-  }
-
   def mccH0Uniform(confMat: ConfusionMatrix, threshold: Double = 0.05): HypothesisTestResult = {
     // H0: uniform distribution over the confusion matrix
     val x = confMat.n * squared(confMat.matthewsCorrelationCoefficient)
-    1.0 - chi2CDF(x, confMat.n.toInt)
+    val F = chi2CDF(x, confMat.n.toInt)
+    val pValue = 1.0 - F
+    val passed = pValue < threshold
+
+    HypothesisTestResult(
+      statistic = "mcc",
+      statisticDelta = math.abs(confMat.matthewsCorrelationCoefficient),
+      cdfX = F,
+      pValue = pValue,
+      rejectNull = passed,
+      threshold = threshold
+    )
   }
 
   // n * squared(MCC) ~ Chi2, where n = confmat.n
@@ -174,7 +230,19 @@ object HypothesisTesting {
     val x: Double = n * hNull.toArray.zip(hAlt.toArray).map{ case (pNull,pAlt) =>
       pNull * squared( (pAlt - pNull)  / pNull )
     }.sum
-    1.0 - chi2CDF(x, n - 1)
+
+    val F = chi2CDF(x, n - 1)
+    val pValue = 1.0 - F
+    val passed = pValue < threshold
+
+    HypothesisTestResult(
+      statistic = "mcc",
+      statisticDelta = confMatAlt.matthewsCorrelationCoefficient - confMatNull.matthewsCorrelationCoefficient,
+      cdfX = F,
+      pValue = pValue,
+      rejectNull = passed,
+      threshold = threshold
+    )
   }
 
   private def binomialCDF(xAlt: Int, nAlt: Int, pNull: Double): Double = {

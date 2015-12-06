@@ -48,14 +48,15 @@ object HypothesisTesting {
     this.binomialCDF(xAlt, nAlt, pNull)
   }
 
+  // error should test left (less error is improvement)
   def error(confMatNull: ConfusionMatrix, confMatAlt: ConfusionMatrix, threshold: Double = 0.05): HypothesisTestResult = {
     val F = this.errorCDF(confMatNull, confMatAlt)
-    val pValue = 1 - F
+    val pValue = F
     val passed = pValue < threshold
 
     HypothesisTestResult(
       statistic = "error",
-      statisticDelta = confMatAlt.error - confMatNull.error,
+      statisticDelta = confMatNull.error - confMatAlt.error,
       cdfX = F,
       pValue = pValue,
       rejectNull = passed,
@@ -70,7 +71,7 @@ object HypothesisTesting {
 
     HypothesisTestResult(
       statistic = "error",
-      statisticDelta = confMatAlt.error - confMatNull.error,
+      statisticDelta = confMatNull.error - confMatAlt.error,
       cdfX = F,
       pValue = pValue,
       rejectNull = passed,

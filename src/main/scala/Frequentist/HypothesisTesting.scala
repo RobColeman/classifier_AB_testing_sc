@@ -56,7 +56,7 @@ object HypothesisTesting {
 
     HypothesisTestResult(
       statistic = "error",
-      statisticDelta = confMatNull.error - confMatAlt.error,
+      statisticDelta = confMatAlt.error - confMatNull.error,
       cdfX = F,
       pValue = pValue,
       rejectNull = passed,
@@ -71,7 +71,7 @@ object HypothesisTesting {
 
     HypothesisTestResult(
       statistic = "error",
-      statisticDelta = confMatNull.error - confMatAlt.error,
+      statisticDelta = confMatAlt.error - confMatNull.error,
       cdfX = F,
       pValue = pValue,
       rejectNull = passed,

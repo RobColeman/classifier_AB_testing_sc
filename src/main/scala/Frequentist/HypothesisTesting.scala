@@ -162,10 +162,6 @@ object HypothesisTesting {
     this.binomialCDF(xAlt, nAlt, pNull)
   }
 
-
-
-
-  // f-1 ~ Binomial
   def f1(confMatNull: ConfusionMatrix, confMatAlt: ConfusionMatrix, threshold: Double = 0.05): HypothesisTestResult = {
     val F = this.f1CDF(confMatNull, confMatAlt)
     val pValue = 1 - F

@@ -1,12 +1,8 @@
 package Frequentist
 
 import helpers.math._
-import scala.math
 import models.ConfusionMatrix
 import org.apache.commons.math3.distribution.BinomialDistribution
-import org.apache.commons.math3.distribution.ChiSquaredDistribution
-
-
 
 object HypothesisTesting {
 
@@ -195,61 +191,22 @@ object HypothesisTesting {
   private def f1CDF(confMatNull: ConfusionMatrix, confMatAlt: ConfusionMatrix): Double = {
     val pNull = confMatNull.f1Coefficient
     val nAlt: Int = {
-      val n = 2 * squared(confMatAlt.tp).toInt + (confMatAlt.tp * confMatAlt.fn) + (confMatAlt.tp * confMatAlt.fp) + (confMatAlt.fn * confMatAlt.fp)
-      n.toInt
-    }
+      2 * squared(confMatAlt.tp) + (confMatAlt.tp * confMatAlt.fn) + (confMatAlt.tp * confMatAlt.fp)
+    }.toInt
     val xAlt: Int = 2 * squared(confMatAlt.tp).toInt
     this.binomialCDF(xAlt, nAlt, pNull)
   }
 
-  def mccH0Uniform(confMat: ConfusionMatrix, threshold: Double = 0.05): HypothesisTestResult = {
-    // H0: uniform distribution over the confusion matrix
-    val x = confMat.n * squared(confMat.matthewsCorrelationCoefficient)
-    val F = chi2CDF(x, confMat.n.toInt)
-    val pValue = 1.0 - F
-    val passed = pValue < threshold
-
-    HypothesisTestResult(
-      statistic = "mcc",
-      statisticDelta = math.abs(confMat.matthewsCorrelationCoefficient),
-      cdfX = F,
-      pValue = pValue,
-      rejectNull = passed,
-      threshold = threshold
-    )
+  // chi2 test
+  private def mcc(confMatNull: ConfusionMatrix, confMatAlt: ConfusionMatrix): Double = {
+    ???
   }
 
-  // n * squared(MCC) ~ Chi2, where n = confmat.n
-  def mcc(confMatNull: ConfusionMatrix, confMatAlt: ConfusionMatrix, threshold: Double = 0.05): HypothesisTestResult = {
-    val hNull = confMatNull.confusionMatrixNormalized
-    val hAlt = confMatAlt.confusionMatrixNormalized
-    val n: Int = confMatAlt.n.toInt
-    val x: Double = n * hNull.toArray.zip(hAlt.toArray).map{ case (pNull,pAlt) =>
-      pNull * squared( (pAlt - pNull)  / pNull )
-    }.sum
 
-    val F = chi2CDF(x, n - 1)
-    val pValue = 1.0 - F
-    val passed = pValue < threshold
-
-    HypothesisTestResult(
-      statistic = "mcc",
-      statisticDelta = confMatAlt.matthewsCorrelationCoefficient - confMatNull.matthewsCorrelationCoefficient,
-      cdfX = F,
-      pValue = pValue,
-      rejectNull = passed,
-      threshold = threshold
-    )
-  }
 
   private def binomialCDF(xAlt: Int, nAlt: Int, pNull: Double): Double = {
     val B = new BinomialDistribution(nAlt, pNull)
     B.cumulativeProbability(xAlt)
-  }
-
-  private def chi2CDF(x: Double, k: Int): Double = {
-    val ch2: ChiSquaredDistribution = new ChiSquaredDistribution(k)
-    ch2.cumulativeProbability(x)
   }
 
 }
